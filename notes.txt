@@ -1,0 +1,22 @@
+db directory
+connection.js index.js schema.sql seed.sql
+
+root
+index.js
+package.js
+
+
+promise 
+
+make async
+
+const getDepartments = () =>
+    new Promise((resolve, reject) => {
+      connection.query('SELECT name FROM department', (err, results) => {
+        if (err) reject(new Error('There was an error: ', err));
+        departments = results
+        resolve(departments)
+      })
+    })
+getDepartments().then((departments) => {function}
+
