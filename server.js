@@ -196,32 +196,40 @@ const viewDept = () => {
 //     resolve (employees);
 //     start();
 // });
-}    
+// }    
 
 // })
-//     connection.query('SELECT name FROM department'), (err, res) => {
-//         if (err) throw err;
-//         inquirer
-//             .prompt([
-//                 {
-//                     name: 'department',
-//                     type: 'list',
-//                     choices() {
-//                         const departmentArray = [];
-//                         res.forEach(({ name }) => {
-//                             departmentArray.push(name);
-//                         });
-//                         return departmentArray
-//                     },
-//                     message: 'Which department would you like to view?',
-//                 }
-//             ])
-//             .then((answer) => {
-//                 connection.query(`SELECT * FROM `) // <------------------ NEED TO FINISH THIS -------------------------------
-//             })
-//     }
-    
-// };
+    connection.query('SELECT name FROM department'), (err, res) => {
+        if (err) throw err;
+        inquirer
+            .prompt([
+                {
+                    name: 'department',
+                    type: 'list',
+                    choices() {
+                        let departmentArray = [];
+                        res.forEach(({ name }) => {
+                            departmentArray.push(name);
+                        });
+                        return departmentArray
+                    },
+                    message: 'Which department would you like to view?',
+                }
+            ])
+            .then((answer) => {
+                const query = `SELECT employee.id, CONCAT (employee.first_name, " ", employee.last_name) AS employee, role.title
+                FROM employee
+                LEFT JOIN role on employee.role_id = role.id
+                LEFT JOIN department ON department_id = department.id
+                WHERE department.name = ?`
+                connection.query(query, { name: answer.department }, (err, res) => {
+                    if (err) throw err;
+                    console.table(res)
+                }) // <------------------ NEED TO FINISH THIS -------------------------------
+            })
+    }
+    start();
+};
 
 const viewRoles = () => {
     connection.query('SELECT title FROM role'), (err, res) => {
@@ -260,7 +268,11 @@ const viewRoles = () => {
 // });
 
 const viewEmployees =  () => new Promise((resolve, reject) => {
-        connection.query('SELECT employee.id, CONCAT (employee.first_name, " ", employee.last_name) AS employee, role.title, role.salary,department.name AS department, CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id LEFT JOIN employee manager on employee.manager_id = manager.id', (err, res) => {
+        connection.query(`SELECT employee.id, CONCAT (employee.first_name, " ", employee.last_name) AS employee, 
+        role.title, role.salary,department.name AS department, 
+        CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee 
+        LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id 
+        LEFT JOIN employee manager on employee.manager_id = manager.id`, (err, res) => {
         if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));
         // const employees = console.table(res);
         const employees = res
