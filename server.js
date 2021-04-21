@@ -2,9 +2,8 @@ const mysql = require('mysql');
 const inquirer = require('inquirer');
 const table = require('console.table');
 require('custom-env').env(true);
-// const chalk = require('chalk');
-// const error = chalk.bold.red;
 const colors = require('colors');
+// const connection = require('./db/connection.js');
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -31,63 +30,198 @@ const title = () => {
     start();
 }
 
-const start = () => {
+const start = async () => {
 
-    inquirer
-      .prompt({
-        name: 'functionChoice',
-        type: 'list',
-        message: 'Hello. What would you like to do, O Great One?',
-        choices: ['Add an employee', 'View departments', 'View roles', 'View all employees', 'Update employee roles', 'EXIT'],
-      })
-      .then((answer) => {
-        // based on their answer, call the appropriate function
-        // switch/case? 
-        if (answer.functionChoice === 'Add an employee') {
-            addToDB();
-        } else if (answer.functionChoice === 'View departments') {
-            viewDept();
-        } else if (answer.functionChoice === 'View roles') {
-            viewRoles();
-        } else if (answer.functionChoice === 'View all employees') {
-            viewEmployees();
-        } else if (answer.functionChoice === 'Update employee roles') {
-            updateRole();
-        } else {
-          connection.end();
-        }
-      });
-  };
-
-const addToDB = () => {
+    await inquirer
+        .prompt({
+            name: 'choice',
+            type: 'list',
+            message: 'Hello. What would you like to do, O Great One?',
+            choices: ['Add employee, role or department', 'View employees, roles or departments', 'Update employee information', 'EXIT'],
+        })
+        .then (async (answer) => {
+            // if (answer.choice === 'Add employee, role or department') {
+            //     inquirer
+            //         .prompt({
+            //                 name: 'addChoice',
+            //                 type: 'list',
+            //                 message: 'Choose wisely:',
+            //                 choices: ['Add employee', 'Add role', 'Add department', 'BACK'],
+            //             })
+            //             .then((choice) => {
+            //                     if (choice.addChoice === 'Add employee') {
+            //                         addEmployee();
+            //                     } else if (choice.addChoice === )
 
 
+            //                     case 'Add employee':
+            //                         addEmployee();
+            //                         break;
+
+            //                     case 'View roles': 
+            //                         addRole();
+            //                         break;
+
+            //                     case 'View departments':
+            //                         addDepartment();
+            //                         break;
+            //                     case 'Back':
+            //                         start();
+            //                         break;
+                            
+            //                 }
+            //             })
+
+                    
+            //     addToDB();
+            // } else if (answer.functionChoice === 'View employees, roles or departments') {
+            //     viewDept();
+            // } else if (answer.functionChoice === 'Update employee information') {
+            //     viewRoles();
+            // } else {
+            //   connection.end();
+            // }
+            switch (answer.choice) {
+                case 'Add employee, role or department':
+                    inquirer
+                        .prompt ({
+                            name: 'addChoice',
+                            type: 'list',
+                            message: 'Choose wisely:',
+                            choices: ['Add employees', 'Add role', 'Add department', 'BACK'],
+                        })
+                        .then((choice) => {
+                            switch(choice.addChoice) {
+                                case 'Add employee':
+                                    addEmployee();
+                                    break;
+
+                                case 'Add role': 
+                                    addRole();
+                                    break;
+
+                                case 'Add department':
+                                    addDepartment();
+                                    break;
+                                case 'Back':
+                                    start();
+                                    break;
+                            
+                            }
+                        })
+
+                case 'View employees, roles or departments':
+                    inquirer
+                        .prompt ({
+                            name: 'viewChoice',
+                            type: 'list',
+                            message: 'Choose wisely:',
+                            choices: ['View employees', 'View roles', 'View departments', 'BACK'],
+                        })
+                        .then(async (choice) => {
+                            switch(choice.viewChoice) {
+                                case 'View employees':
+                                    viewEmployees();
+                                    break;
+
+                                case 'View roles': 
+                                    await viewRoles();
+                                    break;
+
+                                case 'View departments':
+                                    await viewDept();
+                                    break;
+                                case 'Back':
+                                    await start()
+                                    break;
+                            }
+                        }) 
+                case 'Update employee information':
+                    await inquirer
+                        .prompt ({
+                            name: 'updateChoice',
+                            type: 'list',
+                            message: 'Choose wisely:',
+                            choices: ['Update employee role', 'Update employee manager'],
+                        })
+                        .then((choice) => {
+                            switch(choice.updateChoice) {
+                                case 'Update employee role':
+                                    updateRole();
+                                    break;
+
+                                case 'Update employee manager':
+                                    updateManager();
+                                    break;
+                            }
+                        })
+                case 'EXIT':
+                    console.log('');
+                    console.log('Have fun storming the castle!'.red)
+                    console.log('    ()==[:::::::::::::>')
+                    connection.end();
+            }
+        })
+    }
+
+    
+
+const addEmployee = () => {
+
+    console.log('Employee added!'.green);
+    start();
+};
+
+const addRole = () => {
+
+    console.log('Role added!'.green);
+    start();
+};
+
+const addDepartment = () => {
+
+    console.log('Department added!'.green);
+    start();
 };
 
 const viewDept = () => {
-    connection.query('SELECT name FROM department'), (err, res) => {
-        if (err) throw err;
-        inquirer
-            .prompt([
-                {
-                    name: 'department',
-                    type: 'list',
-                    choices() {
-                        const departmentArray = [];
-                        res.forEach(({ name }) => {
-                            departmentArray.push(name);
-                        });
-                        return departmentArray
-                    },
-                    message: 'Which department would you like to view?',
-                }
-            ])
-            .then((answer) => {
-                connection.query(`SELECT * FROM `) // <------------------ NEED TO FINISH THIS -------------------------------
-            })
-    }
+// new Promise ((resolve, reject) => {
+//     connection.query('SELECT name FROM department', (err, res) => {
+//     // if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));
+//     if (err) throw err;
+
     
-};
+//     const employees = console.table(res);
+//     console.log('');
+//     resolve (employees);
+//     start();
+// });
+}    
+
+// })
+//     connection.query('SELECT name FROM department'), (err, res) => {
+//         if (err) throw err;
+//         inquirer
+//             .prompt([
+//                 {
+//                     name: 'department',
+//                     type: 'list',
+//                     choices() {
+//                         const departmentArray = [];
+//                         res.forEach(({ name }) => {
+//                             departmentArray.push(name);
+//                         });
+//                         return departmentArray
+//                     },
+//                     message: 'Which department would you like to view?',
+//                 }
+//             ])
+//             .then((answer) => {
+//                 connection.query(`SELECT * FROM `) // <------------------ NEED TO FINISH THIS -------------------------------
+//             })
+//     }
+    
+// };
 
 const viewRoles = () => {
     connection.query('SELECT title FROM role'), (err, res) => {
@@ -125,25 +259,34 @@ const viewRoles = () => {
     
 // });
 
-const viewEmployees =  () => 
-    new Promise ((resolve, reject) => {
-        connection.query('SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary,department.name AS department, CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id LEFT JOIN employee manager on employee.manager_id = manager.id', (err, res) => {
-        // if (err) reject(new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));
-        const employees = console.table(res);
+const viewEmployees =  () => new Promise((resolve, reject) => {
+        connection.query('SELECT employee.id, CONCAT (employee.first_name, " ", employee.last_name) AS employee, role.title, role.salary,department.name AS department, CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id LEFT JOIN employee manager on employee.manager_id = manager.id', (err, res) => {
+        if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));
+        // const employees = console.table(res);
+        const employees = res
         resolve (employees);
-        start();
-    });
         
-    
-}).catch(err => console.error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));
+    })
+        .then((employees) => {
+            console.log('');
+            console.table(employees)
+            start();
+    });
+});
 
 const updateRole = () => {
 
-    
+    console.log('Employee role updated!'.green);
+    start();
 };
 
+const updateManager = () => {
 
+    console.log('Employee manager updated!'.green);
+    start();
+};
 
+// title();
 // connect to the mysql server and sql database
 connection.connect((err) => {
     if (err) throw err;
