@@ -9,4 +9,6 @@ VALUES ("Sales Lead", 100000, 1), ("Salesperson", 60000, 1), ("HR Manager", 8000
 
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
 VALUES ("Ash", "Williams", 1, null), ("Grogu", "Babyyoda", 2, 1), ("Jean-Luc", "Picard", 3, null), ("William", "Riker", 4, 3),
-("Luke", "Skywalker", 5, null), ("Han", "Solo", 6, 5);
+("Luke", "Skywalker", 5, null), ("Han", "Solo", 6, 5), ("Frodo", "Baggins", 7, null), ("Merry", "Brandybuck", 8, 7), ("Pippin", "Took", 8, 7),
+("Corbin", "Dallas", 9, null), ("Leeloo", "Sabat", 9, null), ("Vito", "Cornelius", 10, 11), ("Ruby", "Rod", 10, 10), ("James", "Cole", 2, 1), 
+("Donnie", "Darko", 2, 1), ("Malcolm", "Reynolds", 2, 1), ("Kyle", "Reese", 2, 1);
