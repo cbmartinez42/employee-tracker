@@ -50,7 +50,8 @@ const start = async () => {
                     break;
 
                 case 'Update employee role':
-                    await updateFunction();
+                    await updateRole();
+                    start();
                     break;
 
                 case 'EXIT':
@@ -75,7 +76,6 @@ const addFunction = async () => {
             switch(choice.addChoice) {
                 case 'Add employee':
                     await addEmployee();
-                    console.log('after employee function called')
                     start();
                     break;
 
@@ -129,30 +129,30 @@ const viewFunction = async () => {
         }) 
 }
                     
-const updateFunction = async () => {               
-    await inquirer
-        .prompt ({
-            name: 'updateChoice',
-            type: 'list',
-            message: 'Choose wisely:',
-            choices: ['Update employee role', 'Update employee manager', 'BACK'],
-        })
-        .then(async (choice) => {
-            switch(choice.updateChoice) {
-                case 'Update employee role':
-                    await updateRole();
-                    break;
+// const updateFunction = async () => {               
+//     await inquirer
+//         .prompt ({
+//             name: 'updateChoice',
+//             type: 'list',
+//             message: 'Choose wisely:',
+//             choices: ['Update employee role', 'Update employee manager', 'BACK'],
+//         })
+//         .then(async (choice) => {
+//             switch(choice.updateChoice) {
+//                 case 'Update employee role':
+//                     await updateRole();
+//                     break;
 
-                case 'Update employee manager':
-                    await updateManager();
-                    break;
+//                 case 'Update employee manager':
+//                     await updateManager();
+//                     break;
 
-                case 'BACK':
-                    await start()
-                    break;
-            }
-        })
-}
+//                 case 'BACK':
+//                     await start()
+//                     break;
+//             }
+//         })
+// }
    
 const getTitles = async () => {
     return new Promise ((resolve, reject) => {
@@ -188,30 +188,29 @@ const getEmployees = async () => {
     })
 }
 
-const getManagerId = async () => {
+const getManagerId = async (employee) => {
     return new Promise ((resolve, reject) => {
-        let managerid = employee.manager
-        managerid = managerid.split(" ")
-        const managerid_firstName = managerid[0]
-        const managerid_lastName = managerid[1]
-        connection.query('SELECT id FROM employee WHERE first_name = ? AND last_name = ?', 
-        [managerid_firstName, managerid_lastName], (err, res) => {
+        let manager = employee.manager.split(" ")
+        console.log('line 194 ---> ', manager)
+        console.log('line 195 ', manager[0])
+        // const managerFirstName = manager[0]
+        // const managerLastName = employee.manager[1]
+        // console.log('managerFirstName --->', managerFirstName)
+        connection.query(`SELECT id FROM employee WHERE first_name = '${manager[0]}' AND last_name = '${manager[1]}'`, (err, res) => {
             if (err) throw err;
-            employee.manager = (res)
+            console.log(res)
+            resolve (res[0].id)
         })
-        resolve (employee);
     })
 }
 
-const getRoleId = async () => {
+const getRoleId = async (employee) => {
     return new Promise (async(resolve, reject) => {
         // let roleId = addEmployeeAnswers.role;
-        connection.query('SELECT id FROM role WHERE title = ?', employee.title, (err, res) => {
+        connection.query(`SELECT id FROM role WHERE title = '${employee.title}'`, (err, res) => {
             if (err) throw err;
-            employee.role = (res)
+            resolve (res[0].id)
         })
-        
-        resolve (employee);
     })
 }
 
@@ -222,25 +221,6 @@ const getDepartmentId = async (addRoleAnswers) => {
             resolve (res[0].id)
         })
     })    
-}
-
-const pushEmployee = async () =>{
-    return new Promise (async(resolve, reject) => {
-         // connection.query('INSERT INTO employee SET ?', [addEmployeeAnswers], (err, res) => {
-            connection.query('INSERT INTO employee VALUES ?, ?, ?, ?', 
-            ({first_name: employee.firstName,
-            last_name: employee.lastName,
-            role_id: employee.title, 
-            manager_id: employee.manager,
-        }), (err, res) => {
-            console.log(res)
-            if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
-            const employeeAdded = console.log('\nAssimilation of new employee has been completed, my leige\n'.green);
-            resolve (employeeAdded)
-        })
-    }).catch((err) => {
-        console.log('dammit')
-    })
 }
 
 const addEmployee = async () => {
@@ -277,29 +257,27 @@ const addEmployee = async () => {
                 if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
                     return addEmployeeAnswers.manager = null;
                 }
-                employee = addEmployeeAnswers
-                await getRoleId(employee);
-                await getManagerId(employee);
-                console.log(employee)
-                pushEmployee(employee);
-
-                // const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
-                // VALUES (?, ?, ?, ?)`
-                // const query = `INSERT INTO employee SET ?`
-                // if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
-                //     return addEmployeeAnswers.manager = null;
-                // }
-                // console.log(addEmployeeAnswers)
-                // connection.query('INSERT INTO employee SET ?', addEmployeeAnswers, (err, res)=> {
-                //     // if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
-                //     console.log(res)
-                //     const employeeAdded = console.log('\nAssimilation of new employee has been completed, my leige\n'.green);
-                //     resolve (employeeAdded)
-                // })
+                console.log('Line 276 before converting ---> ', addEmployeeAnswers)
+                addEmployeeAnswers.title = await getRoleId(addEmployeeAnswers);
+                addEmployeeAnswers.manager = await getManagerId(addEmployeeAnswers);
+                console.log('Line 279 after converting ---> ', addEmployeeAnswers)
+                // pushEmployee(addEmployeeAnswers);
+                connection.query('INSERT INTO employee SET ?', 
+                {
+                    first_name: addEmployeeAnswers.firstName,
+                    last_name: addEmployeeAnswers.lastName,
+                    role_id: addEmployeeAnswers.title,
+                    manager_id: addEmployeeAnswers.manager
+                }, (err, res) => {
+                    if (err) throw err;
+                    const employeeAdded = console.log('\nAssimilation of new employee has been completed, my leige\n'.green);
+                    resolve (employeeAdded)
+                })
             }).catch((err) => {
                 console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
-            })
-        })};
+        })
+    })
+};
 
 
 
