@@ -5,6 +5,7 @@ require('custom-env').env(true);
 const colors = require('colors');
 const { registerPrompt } = require('inquirer');
 // const connection = require('./db/connection.js');
+let employee;
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -13,6 +14,7 @@ const connection = mysql.createConnection({
     password: process.env.PASSWORD || '',
     database: 'employee_DB',
 });
+
 
 const title = () => {
     console.log('\n∙∙∙∙∙·ₒₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒₒ∙∙∙∙∙·'.bgBlue);
@@ -34,7 +36,7 @@ const start = async () => {
             name: 'choice',
             type: 'list',
             message: 'Hello. What would you like to do, O Great One?',
-            choices: ['Add employee, role or department', 'View employees, roles or departments', 'Update employee information', 'Remove an employee', 'EXIT'],
+            choices: ['Add employee, role or department', 'View employees, roles or departments', 'Update employee role', 'EXIT'],
         })
         .then (async (startAnswer) => {
 
@@ -47,12 +49,8 @@ const start = async () => {
                     await viewFunction();
                     break;
 
-                case 'Update employee information':
+                case 'Update employee role':
                     await updateFunction();
-                    break;
-
-                case 'Remove an employee':
-                    await removeFunction();
                     break;
 
                 case 'EXIT':
@@ -76,7 +74,6 @@ const addFunction = async () => {
         .then( async (choice) => {
             switch(choice.addChoice) {
                 case 'Add employee':
-                    console.log('add employee selected')
                     await addEmployee();
                     console.log('after employee function called')
                     start();
@@ -157,10 +154,101 @@ const updateFunction = async () => {
         })
 }
    
+const getTitles = async () => {
+    return new Promise ((resolve, reject) => {
+        let roleArray = [];
+        connection.query('SELECT title FROM role', (err, res) => {  
+  
+            roleArray = res.map(({ title }) => title)
+            resolve (roleArray)
+        });
+    })
+}
+
+const getDepartmentName = async () => {
+    return new Promise (async(resolve, reject) => {
+        let departmentNameArray = [];
+        connection.query('SELECT name FROM department', (err, res) => {
+            departmentNameArray = res.map(({name}) => name)
+            resolve(departmentNameArray)
+        })
+    })
+}
+
+const getEmployees = async () => {
+    return new Promise ((resolve, reject) => {
+        let employeeArray = ['No one - They serve only themselves'];
+            connection.query('SELECT id, CONCAT (first_name, " ", last_name) AS name FROM employee', (err, res) => { 
+
+            res.forEach(({ name }) => {
+                employeeArray.push(name);
+            })
+            resolve (employeeArray)
+        });  
+    })
+}
+
+const getManagerId = async () => {
+    return new Promise ((resolve, reject) => {
+        let managerid = employee.manager
+        managerid = managerid.split(" ")
+        const managerid_firstName = managerid[0]
+        const managerid_lastName = managerid[1]
+        connection.query('SELECT id FROM employee WHERE first_name = ? AND last_name = ?', 
+        [managerid_firstName, managerid_lastName], (err, res) => {
+            if (err) throw err;
+            employee.manager = (res)
+        })
+        resolve (employee);
+    })
+}
+
+const getRoleId = async () => {
+    return new Promise (async(resolve, reject) => {
+        // let roleId = addEmployeeAnswers.role;
+        connection.query('SELECT id FROM role WHERE title = ?', employee.title, (err, res) => {
+            if (err) throw err;
+            employee.role = (res)
+        })
+        
+        resolve (employee);
+    })
+}
+
+const getDepartmentId = async (addRoleAnswers) => {
+    return new Promise (async(resolve, reject) => {
+        connection.query(`SELECT id FROM department WHERE name = "${addRoleAnswers.department}"`,  (err, res) => {
+            if (err) throw err;
+            resolve (res[0].id)
+        })
+    })    
+}
+
+const pushEmployee = async () =>{
+    return new Promise (async(resolve, reject) => {
+         // connection.query('INSERT INTO employee SET ?', [addEmployeeAnswers], (err, res) => {
+            connection.query('INSERT INTO employee VALUES ?, ?, ?, ?', 
+            ({first_name: employee.firstName,
+            last_name: employee.lastName,
+            role_id: employee.title, 
+            manager_id: employee.manager,
+        }), (err, res) => {
+            console.log(res)
+            if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
+            const employeeAdded = console.log('\nAssimilation of new employee has been completed, my leige\n'.green);
+            resolve (employeeAdded)
+        })
+    }).catch((err) => {
+        console.log('dammit')
+    })
+}
 
 const addEmployee = async () => {
-    console.log('addemployee')
-        await inquirer
+    return new Promise (async(resolve, reject) => {
+        const roleArray = await getTitles();
+        const employeeArray = await getEmployees();
+
+        inquirer
             .prompt([
                 {
                     name: "firstName",
@@ -176,75 +264,116 @@ const addEmployee = async () => {
                     name: "title",
                     type: 'list',
                     message: "And what is the new recruit's title, excellency?",
-                    choices: () => {
-                        let roleArray = [];
-                            connection.query('SELECT title FROM role', (err, res) => { 
-                                if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));      // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻                    
-                            res.forEach(({ title }) => {
-                            roleArray.push(title);
-                        });
-                        return roleArray
-                        })
-
-                    }
+                    choices: roleArray
                 },
                 {
                     name: 'manager',
                     type: 'list',
                     message: 'Choose whom this scalawag will serve:',
-                    choices: () => {
-                        let employeeArray = ['No one - They serve only themselves'];
-                            connection.query('SELECT id, CONCAT (first_name, " ", last_name) AS name FROM employee', (err, res) => { 
-                                if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
-                            res.forEach(({ name }) => {
-                            employeeArray.push(name);
-                            });
-                            return employeeArray
-                        });
-                        
-                    }
+                    choices: employeeArray
                 }
             ])
-    
-    console.log('\n\n-------------------------------------------------------------\n');
-    console.log(`Assimilation of new employee ${to.be.completed} has been completed, my leige`.green);
-    console.log('\n-------------------------------------------------------------\n');
+            .then(async(addEmployeeAnswers) => {
+                if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
+                    return addEmployeeAnswers.manager = null;
+                }
+                employee = addEmployeeAnswers
+                await getRoleId(employee);
+                await getManagerId(employee);
+                console.log(employee)
+                pushEmployee(employee);
 
-};
+                // const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                // VALUES (?, ?, ?, ?)`
+                // const query = `INSERT INTO employee SET ?`
+                // if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
+                //     return addEmployeeAnswers.manager = null;
+                // }
+                // console.log(addEmployeeAnswers)
+                // connection.query('INSERT INTO employee SET ?', addEmployeeAnswers, (err, res)=> {
+                //     // if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
+                //     console.log(res)
+                //     const employeeAdded = console.log('\nAssimilation of new employee has been completed, my leige\n'.green);
+                //     resolve (employeeAdded)
+                // })
+            }).catch((err) => {
+                console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
+            })
+        })};
+
+
 
 const addRole = () => {
-
-    console.log('Role added!'.green);
-
+    return new Promise (async(resolve, reject) => {
+        const departmentArray = await getDepartmentName()
+        inquirer
+            .prompt([
+                {
+                    name: "title",
+                    type: 'input',
+                    message: 'What role would you like to add, highness?'
+                },
+                {
+                    name: "salary",
+                    type: 'input',
+                    message: "What is the going rate for this type of minion's services?"
+                },
+                {
+                    name: 'department',
+                    type: 'list',
+                    message: 'What department shall the this report under, my lord?',
+                    choices: departmentArray,
+                }
+            ])
+            .then( async (addRoleAnswers) => {
+                addRoleAnswers.department = await getDepartmentId(addRoleAnswers)
+                connection.query(`INSERT INTO role (title, salary, department_id) VALUES ("${addRoleAnswers.title}", ${addRoleAnswers.salary}, ${addRoleAnswers.department});`, (err, res) => {
+                const departmentAdded = console.log(`\n New role ${addRoleAnswers.title} has been added, my leige\n`.green)
+                resolve (departmentAdded)
+            })
+            }).catch((err) => {
+                console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
+            })
+    })
 };
 
 const addDepartment = () => {
-
-    console.log('Department added!'.green);
-
+    return new Promise ((resolve, reject) => {
+    inquirer
+        .prompt([
+            {
+                name: "department",
+                type: 'input',
+                message: 'What department would you like to add, highness?'
+            }
+        ])
+        .then((answer) => {
+            connection.query(`INSERT INTO department (name) VALUES ("${answer.department}");`, (err, res) => {
+            const departmentAdded = console.log(`\n New department ${answer.department} has been added, my leige\n`.green)
+            resolve (departmentAdded)
+        })
+        }).catch((err) => {
+            console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
+        })
+})
 };
 
+
+
 const viewDept = async () => {
-    return new Promise ((resolve, reject) =>
-    connection.query('SELECT name FROM department', (err, res) => {
-        if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));
+    return new Promise (async (resolve, reject) => {
+        const departmentNameArray = await getDepartmentName();
         inquirer
             .prompt([
                 {
                     name: 'department',
                     type: 'list',
-                    choices() {
-                        let departmentArray = [];
-                        res.forEach(({ name }) => {
-                            departmentArray.push(name);
-                        });
-                        return departmentArray
-                    },
+                    choices: departmentNameArray,
                     message: 'Which department would you like to view?',
                 }
             ])
             .then((answer) => {
-                const query = `SELECT employee.id, CONCAT (employee.first_name, " ", employee.last_name) AS employee, role.title
+                const query = `SELECT CONCAT (employee.first_name, " ", employee.last_name) AS employee, role.title
                 FROM employee
                 LEFT JOIN role on employee.role_id = role.id
                 LEFT JOIN department ON department_id = department.id
@@ -255,27 +384,21 @@ const viewDept = async () => {
                     const departments = console.table(res);
                     resolve (departments);
                 }); 
-            });
-     
-    }));
+            }).catch((err) => {
+                console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
+            })
+    });
 };
 
 const viewRoles = async () => {
-    return new Promise ((resolve, reject) => {
-    connection.query('SELECT title FROM role', (err, res) => { 
-        if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err));      // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻  
+    return new Promise ( async(resolve, reject) => {
+       const roleArray = await getTitles();
         inquirer
             .prompt([
                 {
                     name: 'role',
                     type: 'list',
-                    choices: () => {
-                        let roleArray = [];
-                        res.forEach(({ title }) => {
-                            roleArray.push(title);
-                        });
-                        return roleArray
-                    },
+                    choices: roleArray,
                     message: 'Which role would you like to view?'
                 }
             ])
@@ -288,15 +411,13 @@ const viewRoles = async () => {
                 LEFT JOIN employee manager on employee.manager_id = manager.id
                 WHERE role.title = ?`
                 connection.query(query, answer.role, (err, res) => {
-                    if (err) reject (new Error(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)); // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻  
                     console.log(`\nHere are your results for all employees in the ${answer.role} role, my leige\n`.green);
                     const roles = console.table(res);
                     resolve (roles);
                 }); 
-            });
-        
-    });
-  
+            }).catch((err) => {
+                console.log(" Oops! Something went wrong (╯°□°）╯︵ ┻━┻ ".bgRed, err)
+            })
 })};
 
 const viewEmployees = () => 
@@ -307,14 +428,14 @@ const viewEmployees = () =>
         LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id 
         LEFT JOIN employee manager on employee.manager_id = manager.id`, (err, res) => {
         if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));   // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻  
-        console.log('\n\n-------------------------------------------------\n');
+        
+        console.log('\n\n-------------------------------------------------');
         console.log(`Here are your results for all employees, my leige`.green);
-        console.log('\n-------------------------------------------------\n');
+        console.log('-------------------------------------------------\n');
         const employees = console.table(res);
         resolve (employees);
        
-    });
-    
+    })
 });
 
 const updateRole = () => {
@@ -323,17 +444,6 @@ const updateRole = () => {
 
 };
 
-const updateManager = () => {
-
-    console.log('Employee manager updated!'.green);
-
-};
-
-const removeFunction = () => {
-
-    console.log('Employee removed!'.green);
-
-}
 
 // connect to the mysql server and sql database
 connection.connect((err) => {
