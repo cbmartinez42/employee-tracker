@@ -1,10 +1,9 @@
 const mysql = require('mysql');
 const inquirer = require('inquirer');
 const table = require('console.table');
-require('custom-env').env(true);
+require('dotenv').config()
 const colors = require('colors');
-const { registerPrompt } = require('inquirer');
-// const connection = require('./db/connection.js');
+
 let employee;
 
 const connection = mysql.createConnection({
@@ -123,37 +122,12 @@ const viewFunction = async () => {
                     break;
 
                 case 'BACK':
-                    await start()
+                    await start();
                     break;
             }
         }) 
 }
-                    
-// const updateFunction = async () => {               
-//     await inquirer
-//         .prompt ({
-//             name: 'updateChoice',
-//             type: 'list',
-//             message: 'Choose wisely:',
-//             choices: ['Update employee role', 'Update employee manager', 'BACK'],
-//         })
-//         .then(async (choice) => {
-//             switch(choice.updateChoice) {
-//                 case 'Update employee role':
-//                     await updateRole();
-//                     break;
-
-//                 case 'Update employee manager':
-//                     await updateManager();
-//                     break;
-
-//                 case 'BACK':
-//                     await start()
-//                     break;
-//             }
-//         })
-// }
-   
+                       
 const getTitles = async () => {
     return new Promise ((resolve, reject) => {
         let roleArray = [];
@@ -188,28 +162,27 @@ const getEmployees = async () => {
     })
 }
 
-const getManagerId = async (employee) => {
+const getEmployeeId = async (employee) => {
     return new Promise ((resolve, reject) => {
-        let manager = employee.manager.split(" ")
-        console.log('line 194 ---> ', manager)
-        console.log('line 195 ', manager[0])
-        // const managerFirstName = manager[0]
-        // const managerLastName = employee.manager[1]
-        // console.log('managerFirstName --->', managerFirstName)
-        connection.query(`SELECT id FROM employee WHERE first_name = '${manager[0]}' AND last_name = '${manager[1]}'`, (err, res) => {
+        let workingEmployee;
+        // since reusing this function, check to see if data is a string or undefined and split the one that is a string
+        if (typeof employee.manager === "string") {
+            workingEmployee = employee.manager.split(" ");
+        } else {
+            workingEmployee = employee.employeeName.split(" ");
+        }
+        connection.query(`SELECT id FROM employee WHERE first_name = '${workingEmployee[0]}' AND last_name = '${workingEmployee[1]}'`, (err, res) => {
             if (err) throw err;
-            console.log(res)
-            resolve (res[0].id)
+            resolve (res[0].id);
         })
     })
 }
 
 const getRoleId = async (employee) => {
     return new Promise (async(resolve, reject) => {
-        // let roleId = addEmployeeAnswers.role;
         connection.query(`SELECT id FROM role WHERE title = '${employee.title}'`, (err, res) => {
             if (err) throw err;
-            resolve (res[0].id)
+            resolve (res[0].id);
         })
     })
 }
@@ -218,7 +191,7 @@ const getDepartmentId = async (addRoleAnswers) => {
     return new Promise (async(resolve, reject) => {
         connection.query(`SELECT id FROM department WHERE name = "${addRoleAnswers.department}"`,  (err, res) => {
             if (err) throw err;
-            resolve (res[0].id)
+            resolve (res[0].id);
         })
     })    
 }
@@ -257,11 +230,8 @@ const addEmployee = async () => {
                 if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
                     return addEmployeeAnswers.manager = null;
                 }
-                console.log('Line 276 before converting ---> ', addEmployeeAnswers)
                 addEmployeeAnswers.title = await getRoleId(addEmployeeAnswers);
-                addEmployeeAnswers.manager = await getManagerId(addEmployeeAnswers);
-                console.log('Line 279 after converting ---> ', addEmployeeAnswers)
-                // pushEmployee(addEmployeeAnswers);
+                addEmployeeAnswers.manager = await getEmployeeId(addEmployeeAnswers);
                 connection.query('INSERT INTO employee SET ?', 
                 {
                     first_name: addEmployeeAnswers.firstName,
@@ -407,19 +377,45 @@ const viewEmployees = () =>
         LEFT JOIN employee manager on employee.manager_id = manager.id`, (err, res) => {
         if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));   // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻  
         
-        console.log('\n\n-------------------------------------------------');
-        console.log(`Here are your results for all employees, my leige`.green);
-        console.log('-------------------------------------------------\n');
+        console.log(`\nHere are your results for all employees, my leige\n`.green);
         const employees = console.table(res);
         resolve (employees);
        
     })
 });
 
+
 const updateRole = () => {
-
-    console.log('Employee role updated!'.green);
-
+    return new Promise (async (resolve, reject) => {
+        let employeeArray = await getEmployees();
+        // since reuising the getEmployees function, remove the first index from since that isn't needed in prompt
+        employeeArray.splice(0, 1);
+        const titleArray = await getTitles();
+        inquirer
+            .prompt([
+                {
+                    name: 'employeeName',
+                    type: 'list',
+                    message: 'Which employee would you like to assign to a new role?',
+                    choices: employeeArray
+                },
+                {
+                    name: 'title',
+                    type: 'list',
+                    message: "What will this minion's new title be?",
+                    choices: titleArray
+                }
+            ])
+            .then(async(updateRoleAnswers) => {
+                updateRoleAnswers.employeeName = await getEmployeeId(updateRoleAnswers);
+                updateRoleAnswers.title = await getRoleId(updateRoleAnswers);
+                connection.query(`UPDATE employee SET role_id = ${updateRoleAnswers.title} WHERE id = ${updateRoleAnswers.employeeName}`, (err, res) => {
+                    if (err) throw err;
+                    const employeeUpdated = console.log('\nEmployee role updated!\n'.green);
+                    resolve (employeeUpdated)
+                })
+            })
+    })
 };
 
 
