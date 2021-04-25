@@ -4,8 +4,6 @@ const table = require('console.table');
 require('dotenv').config()
 const colors = require('colors');
 
-let employee;
-
 const connection = mysql.createConnection({
     host: 'localhost',
     port: process.env.PORT || 3306,
@@ -13,7 +11,6 @@ const connection = mysql.createConnection({
     password: process.env.PASSWORD || '',
     database: 'employee_DB',
 });
-
 
 const title = () => {
     console.log('\n∙∙∙∙∙·ₒₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒ▫ᵒᴼᵒ▫ₒₒ▫ᵒᴼᵒ▫ₒₒ∙∙∙∙∙·'.bgBlue);
@@ -37,8 +34,8 @@ const start = async () => {
             message: 'Hello. What would you like to do, O Great One?',
             choices: ['Add employee, role or department', 'View employees, roles or departments', 'Update employee role', 'EXIT'],
         })
+        // based on user choices, move on to submenu
         .then (async (startAnswer) => {
-
             switch (startAnswer.choice) {
                 case 'Add employee, role or department':
                     await addFunction();
@@ -61,8 +58,7 @@ const start = async () => {
         })        
 }
 
-
-
+// submenu for add functions
 const addFunction = async () => {
     await inquirer
         .prompt ({
@@ -90,12 +86,12 @@ const addFunction = async () => {
 
                 case 'BACK':
                     await start();
-                    break;
-            
+                    break;     
             }
         })
     }
 
+// submenu for view functions
 const viewFunction = async () => {
     await inquirer
         .prompt ({
@@ -127,7 +123,8 @@ const viewFunction = async () => {
             }
         }) 
 }
-                       
+
+//  start helper functions
 const getTitles = async () => {
     return new Promise ((resolve, reject) => {
         let roleArray = [];
@@ -195,6 +192,9 @@ const getDepartmentId = async (addRoleAnswers) => {
         })
     })    
 }
+// end helper functions
+
+
 
 const addEmployee = async () => {
     return new Promise (async(resolve, reject) => {
@@ -227,11 +227,14 @@ const addEmployee = async () => {
                 }
             ])
             .then(async(addEmployeeAnswers) => {
+                // if user selected the "none" option, this changes it to null to be passed to the sql database
                 if (addEmployeeAnswers.manager === 'No one - They serve only themselves') {
                     return addEmployeeAnswers.manager = null;
                 }
+                // run helper functions to get integer data before inserting to db
                 addEmployeeAnswers.title = await getRoleId(addEmployeeAnswers);
                 addEmployeeAnswers.manager = await getEmployeeId(addEmployeeAnswers);
+
                 connection.query('INSERT INTO employee SET ?', 
                 {
                     first_name: addEmployeeAnswers.firstName,
@@ -249,10 +252,9 @@ const addEmployee = async () => {
     })
 };
 
-
-
 const addRole = () => {
     return new Promise (async(resolve, reject) => {
+        // run helper function to get names of departments for list prompt
         const departmentArray = await getDepartmentName()
         inquirer
             .prompt([
@@ -274,6 +276,7 @@ const addRole = () => {
                 }
             ])
             .then( async (addRoleAnswers) => {
+                // run helper function to get department id integer
                 addRoleAnswers.department = await getDepartmentId(addRoleAnswers)
                 connection.query(`INSERT INTO role (title, salary, department_id) VALUES ("${addRoleAnswers.title}", ${addRoleAnswers.salary}, ${addRoleAnswers.department});`, (err, res) => {
                 const departmentAdded = console.log(`\n New role ${addRoleAnswers.title} has been added, my leige\n`.green)
@@ -306,10 +309,9 @@ const addDepartment = () => {
 })
 };
 
-
-
 const viewDept = async () => {
     return new Promise (async (resolve, reject) => {
+        // run helper function to get names of departments for list prompt
         const departmentNameArray = await getDepartmentName();
         inquirer
             .prompt([
@@ -340,6 +342,7 @@ const viewDept = async () => {
 
 const viewRoles = async () => {
     return new Promise ( async(resolve, reject) => {
+        //  run helper function to get titles from role table
        const roleArray = await getTitles();
         inquirer
             .prompt([
@@ -375,22 +378,20 @@ const viewEmployees = () =>
         CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee 
         LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON department_id = department.id 
         LEFT JOIN employee manager on employee.manager_id = manager.id`, (err, res) => {
-        if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));   // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻  
-        
+        if (err) reject (new Error(" Oops! Something went wrong ¯\_(ツ)_/¯ ".bold.bgRed, err));   // (╯°□°）╯︵ ┻━┻  ||  ╯‵Д′)╯ 彡 ┻━┻   
         console.log(`\nHere are your results for all employees, my leige\n`.green);
         const employees = console.table(res);
-        resolve (employees);
-       
+        resolve (employees);       
     })
 });
 
-
 const updateRole = () => {
     return new Promise (async (resolve, reject) => {
-        let employeeArray = await getEmployees();
-        // since reuising the getEmployees function, remove the first index from since that isn't needed in prompt
-        employeeArray.splice(0, 1);
+        // run helper functions to get employee names and get titles
         const titleArray = await getTitles();
+        let employeeArray = await getEmployees();
+        // since reusing the getEmployees function, remove the first index from since that isn't needed in prompt
+        employeeArray.splice(0, 1);
         inquirer
             .prompt([
                 {
@@ -407,6 +408,7 @@ const updateRole = () => {
                 }
             ])
             .then(async(updateRoleAnswers) => {
+                // run helper functions to translate employee name to id and title to integer to push to sql db
                 updateRoleAnswers.employeeName = await getEmployeeId(updateRoleAnswers);
                 updateRoleAnswers.title = await getRoleId(updateRoleAnswers);
                 connection.query(`UPDATE employee SET role_id = ${updateRoleAnswers.title} WHERE id = ${updateRoleAnswers.employeeName}`, (err, res) => {
@@ -417,7 +419,6 @@ const updateRole = () => {
             })
     })
 };
-
 
 // connect to the mysql server and sql database
 connection.connect((err) => {
