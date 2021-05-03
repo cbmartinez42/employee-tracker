@@ -1,6 +1,6 @@
 # Employee Tracking Database
 
-This is an original application create a MySQL database for employee data through a Command Line Interface. This 
+This is an original application create a MySQL database for employee data through a Command Line Interface. This application utilizes basic modules to create an easy-to-use application for adding, viewing and modifying workforce information. 
 
   
 A [video walkthrough](https://www.youtube.com/watch?v=fEtHvfZDQh4) is available
